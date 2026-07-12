@@ -1,6 +1,6 @@
 # Clipboard Manager
 
-Clipboard Manager is a clipboard history extension for GNOME Shell (45–48). It keeps a history of copied text and images, searchable from a paginated popup in the top panel.
+Clipboard Manager is a clipboard history extension for GNOME Shell (45–50). It keeps a history of copied text and images, searchable from a paginated popup in the top panel.
 
 Clipboard changes are captured through Mutter's selection signal (no polling), clips flagged by password managers are never stored, and history is kept in `~/.cache/clipboard-manager/`.
 
