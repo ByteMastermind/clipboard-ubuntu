@@ -145,6 +145,12 @@ class ClipboardIndicator extends PanelMenu.Button {
         }));
 
         this._buildMenu();
+
+        // Invisible 1×1 anchor the popup attaches to in centered mode.
+        this._anchor = new St.Widget({width: 1, height: 1, opacity: 0, reactive: false});
+        Main.uiGroup.add_child(this._anchor);
+        this._applyPopupPosition();
+
         this._loadHistory();
 
         this._selection = global.display.get_selection();
@@ -164,6 +170,8 @@ class ClipboardIndicator extends PanelMenu.Button {
                 if (this._settings.get_boolean('ocr-images'))
                     this._queueMissingOcr();
             }
+            if (key === 'center-popup')
+                this._applyPopupPosition();
             if (this.menu.isOpen)
                 this._refreshList();
         });
@@ -299,10 +307,29 @@ class ClipboardIndicator extends PanelMenu.Button {
         return btn;
     }
 
+    _applyPopupPosition() {
+        const centered = this._settings.get_boolean('center-popup');
+        this.menu.sourceActor = centered ? this._anchor : this;
+        // A zero arrow keeps the centered popup a plain rounded box.
+        this.menu.actor.style = centered ? '-arrow-rise: 0px;' : null;
+    }
+
     _onMenuOpened() {
         this._searchEntry.set_text('');
         this._page = 0;
         this._refreshList();
+        if (this._settings.get_boolean('center-popup')) {
+            // Runs before the first paint of the open animation, so the popup
+            // never flashes at the panel position.
+            const monitor = Main.layoutManager.findMonitorForActor(this);
+            const [, natHeight] = this.menu.actor.get_preferred_height(-1);
+            // Clamp so a popup taller than the monitor stays reachable.
+            const top = Math.max(8, Math.round((monitor.height - natHeight) / 2));
+            this._anchor.set_position(
+                monitor.x + Math.round(monitor.width / 2),
+                monitor.y + top);
+            this.menu._boxPointer.setPosition(this._anchor, 0.5);
+        }
         // The newest clip must hold focus whenever the popup opens.
         this._focusIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
             this._focusIdleId = 0;
@@ -767,6 +794,8 @@ class ClipboardIndicator extends PanelMenu.Button {
         this._destroyed = true;
         this._ocrQueue = [];
         this._ocrCancellable.cancel();
+        this._anchor?.destroy();
+        this._anchor = null;
         if (this._ownerChangedId) {
             this._selection.disconnect(this._ownerChangedId);
             this._ownerChangedId = 0;

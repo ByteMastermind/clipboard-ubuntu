@@ -50,6 +50,11 @@
       <summary>Clips per page</summary>
       <description>How many clips are shown on one page of the popup.</description>
     </key>
+    <key name="center-popup" type="b">
+      <default>false</default>
+      <summary>Center the popup</summary>
+      <description>Show the popup in the middle of the screen instead of attached to the panel icon.</description>
+    </key>
     <key name="toggle-menu" type="as">
       <default><![CDATA[['<Control><Alt>h']]]></default>
       <summary>Toggle the clipboard menu</summary>

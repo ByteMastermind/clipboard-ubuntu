@@ -122,6 +122,13 @@ export default class ClipboardManagerPrefs extends ExtensionPreferences {
         settings.bind('page-size', pageSizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         appearanceGroup.add(pageSizeRow);
 
+        const centerRow = new Adw.SwitchRow({
+            title: 'Center the popup on screen',
+            subtitle: 'Instead of attaching it to the panel icon',
+        });
+        settings.bind('center-popup', centerRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        appearanceGroup.add(centerRow);
+
         const previewRow = new Adw.SwitchRow({
             title: 'Show image previews',
             subtitle: 'Display thumbnails of stored images in the list',
