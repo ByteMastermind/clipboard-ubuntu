@@ -1,0 +1,81 @@
+/* Clipboard Manager — follows the stock shell theme.
+   Only functional styling lives here; colors and item highlighting come from
+   the active shell theme (Yaru on Ubuntu). Grays are neutral rgba so they
+   work on both dark and light shell themes. */
+
+/* Tighter footprint in the top panel than the default 12px. */
+.clipman-indicator {
+  -natural-hpadding: 4px;
+  -minimum-hpadding: 4px;
+}
+
+.clipman-panel-icon {
+  padding: 0;
+}
+
+.clipman-header-title {
+  font-weight: bold;
+  font-size: 10pt;
+}
+
+.clipman-header-btn {
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.clipman-header-btn:hover,
+.clipman-header-btn:focus {
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+.clipman-search {
+  border-radius: 99px;
+  padding: 6px 12px;
+  margin: 4px 8px 6px 8px;
+  background-color: rgba(128, 128, 128, 0.2);
+}
+
+.clipman-search:focus {
+  background-color: rgba(128, 128, 128, 0.32);
+}
+
+/* Row look (hover/focus highlight, padding) comes from the stock
+   .popup-menu-item theme. Only equalise the height so image rows and text
+   rows match — the constant popup height depends on uniform rows. */
+.clipman-item {
+  min-height: 30px;
+}
+
+.clipman-item-meta {
+  font-size: 8pt;
+  padding: 0 4px 0 10px;
+}
+
+.clipman-thumb {
+  border-radius: 6px;
+}
+
+.clipman-del-btn {
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+
+.clipman-del-btn:hover,
+.clipman-del-btn:focus {
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+.clipman-page-btn {
+  border-radius: 8px;
+  padding: 2px 14px;
+  font-weight: bold;
+}
+
+.clipman-page-btn:hover,
+.clipman-page-btn:focus {
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+.clipman-page-label {
+  font-size: 8.5pt;
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.clipboard-manager"
+          path="/org/gnome/shell/extensions/clipboard-manager/">
+    <key name="history-length" type="i">
+      <default>50</default>
+      <range min="1" max="500"/>
+      <summary>History length</summary>
+      <description>Maximum number of clips kept in history.</description>
+    </key>
+    <key name="max-clip-size-kb" type="i">
+      <default>512</default>
+      <range min="1" max="20480"/>
+      <summary>Maximum clip size (KB)</summary>
+      <description>Clips larger than this are not stored.</description>
+    </key>
+    <key name="store-images" type="b">
+      <default>true</default>
+      <summary>Store images</summary>
+      <description>Also keep copied images in the history.</description>
+    </key>
+    <key name="show-image-preview" type="b">
+      <default>true</default>
+      <summary>Show image previews</summary>
+      <description>Show thumbnails of stored images in the popup list.</description>
+    </key>
+    <key name="show-datetime" type="b">
+      <default>false</default>
+      <summary>Show copy time</summary>
+      <description>Show when each clip was copied.</description>
+    </key>
+    <key name="show-line-count" type="b">
+      <default>false</default>
+      <summary>Show line count</summary>
+      <description>Show the number of lines of multi-line clips.</description>
+    </key>
+    <key name="page-size" type="i">
+      <default>10</default>
+      <range min="3" max="30"/>
+      <summary>Clips per page</summary>
+      <description>How many clips are shown on one page of the popup.</description>
+    </key>
+    <key name="toggle-menu" type="as">
+      <default><![CDATA[['<Control><Alt>h']]]></default>
+      <summary>Toggle the clipboard menu</summary>
+      <description>Keyboard shortcut that opens/closes the clipboard popup.</description>
+    </key>
+  </schema>
+</schemalist>

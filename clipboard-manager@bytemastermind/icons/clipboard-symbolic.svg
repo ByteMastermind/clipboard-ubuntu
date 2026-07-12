@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <path fill="#bebebe" d="M6 1c-.55 0-1 .45-1 1H3.5C2.67 2 2 2.67 2 3.5v10c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-10c0-.83-.67-1.5-1.5-1.5H11c0-.55-.45-1-1-1H6zm0 1h4v1.5H6V2zM3.5 3H5v.5c0 .55.45 1 1 1h4c.55 0 1-.45 1-1V3h1.5c.28 0 .5.22.5.5v10c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5v-10c0-.28.22-.5.5-.5z"/>
+  <rect fill="#bebebe" x="4.5" y="7" width="7" height="1" rx=".5"/>
+  <rect fill="#bebebe" x="4.5" y="9.5" width="5" height="1" rx=".5"/>
+</svg>

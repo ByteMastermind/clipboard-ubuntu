@@ -1,0 +1,8 @@
+{
+  "uuid": "clipboard-manager@bytemastermind",
+  "name": "Clipboard Manager",
+  "description": "Fast clipboard history for text and images. Click the panel icon or press Ctrl+Alt+H. Arrow keys navigate clips, Ctrl+← Ctrl+→ switch pages, / searches.",
+  "shell-version": ["45", "46", "47", "48"],
+  "settings-schema": "org.gnome.shell.extensions.clipboard-manager",
+  "version": 1
+}
