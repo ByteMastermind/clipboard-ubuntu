@@ -19,6 +19,16 @@
       <summary>Store images</summary>
       <description>Also keep copied images in the history.</description>
     </key>
+    <key name="ocr-images" type="b">
+      <default>false</default>
+      <summary>Search text in images</summary>
+      <description>Recognize text in copied images (via tesseract) so search can find them.</description>
+    </key>
+    <key name="ocr-languages" type="s">
+      <default>'eng'</default>
+      <summary>OCR languages</summary>
+      <description>Tesseract language codes joined with +, e.g. eng+ces.</description>
+    </key>
     <key name="show-image-preview" type="b">
       <default>true</default>
       <summary>Show image previews</summary>

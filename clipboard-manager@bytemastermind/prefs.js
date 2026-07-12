@@ -67,6 +67,28 @@ export default class ClipboardManagerPrefs extends ExtensionPreferences {
         settings.bind('store-images', imagesRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         historyGroup.add(imagesRow);
 
+        const hasTesseract = GLib.find_program_in_path('tesseract') !== null;
+        const ocrRow = new Adw.SwitchRow({
+            title: 'Search text in images',
+            subtitle: hasTesseract
+                ? 'Recognize text in copied images (OCR) so search can find them'
+                : 'Requires the tesseract-ocr package (sudo apt install tesseract-ocr)',
+            sensitive: hasTesseract,
+        });
+        settings.bind('ocr-images', ocrRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        historyGroup.add(ocrRow);
+
+        const ocrLangRow = new Adw.EntryRow({
+            title: 'OCR languages',
+            tooltip_text: 'Tesseract language codes joined with +, e.g. eng+ces. Each needs its package (tesseract-ocr-ces, …).',
+        });
+        settings.bind('ocr-languages', ocrLangRow, 'text', Gio.SettingsBindFlags.DEFAULT);
+        if (hasTesseract)
+            settings.bind('ocr-images', ocrLangRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        else
+            ocrLangRow.sensitive = false;
+        historyGroup.add(ocrLangRow);
+
         const usageRow = new Adw.ActionRow({
             title: 'History size on disk',
             subtitle: 'Text index and stored images',

@@ -38,8 +38,10 @@ function formatTime(ts) {
 function entryMatches(entry, query) {
     if (!query)
         return true;
-    if (entry.kind === 'image')
-        return 'image'.includes(query);
+    if (entry.kind === 'image') {
+        return 'image'.includes(query) ||
+            (entry.ocr ?? '').toLowerCase().includes(query);
+    }
     return entry.text.toLowerCase().includes(query);
 }
 
@@ -70,9 +72,15 @@ class ClipItem extends PopupMenu.PopupBaseMenuItem {
             }));
         }
 
-        const text = entry.kind === 'image'
-            ? 'Image'
-            : entry.text.replace(/\s+/g, ' ').trim().slice(0, 120);
+        let text;
+        if (entry.kind === 'image') {
+            const ocr = (entry.ocr ?? '').replace(/\s+/g, ' ').trim();
+            text = ocr === '' ? 'Image' : ocr.slice(0, 120);
+            if (ocr !== '')
+                metaParts.unshift('Image');
+        } else {
+            text = entry.text.replace(/\s+/g, ' ').trim().slice(0, 120);
+        }
         const label = new St.Label({
             text,
             style_class: 'clipman-item-label',
@@ -120,6 +128,10 @@ class ClipboardIndicator extends PanelMenu.Button {
         this._coalesceId = 0;
         this._saveId = 0;
         this._focusIdleId = 0;
+        this._ocrQueue = [];
+        this._ocrBusy = false;
+        this._ocrCancellable = new Gio.Cancellable();
+        this._destroyed = false;
 
         this._dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'clipboard-manager']);
         this._imgDir = GLib.build_filenamev([this._dir, 'images']);
@@ -146,6 +158,11 @@ class ClipboardIndicator extends PanelMenu.Button {
                 this._prune();
                 this._updateCount();
                 this._scheduleSave();
+            }
+            if (key === 'ocr-images') {
+                this._tesseract = undefined; // re-detect the binary
+                if (this._settings.get_boolean('ocr-images'))
+                    this._queueMissingOcr();
             }
             if (this.menu.isOpen)
                 this._refreshList();
@@ -506,7 +523,9 @@ class ClipboardIndicator extends PanelMenu.Button {
                         console.error(`clipman: failed to store image: ${e.message}`);
                         return;
                     }
-                    this._addEntry({id, kind: 'image', mime, path: f.get_path(), hash, size, ts: Date.now()});
+                    const entry = {id, kind: 'image', mime, path: f.get_path(), hash, size, ts: Date.now()};
+                    this._addEntry(entry);
+                    this._queueOcr(entry);
                 });
         });
     }
@@ -611,7 +630,7 @@ class ClipboardIndicator extends PanelMenu.Button {
 
     _serialize() {
         const entries = this._entries.map(e => e.kind === 'image'
-            ? {id: e.id, kind: e.kind, mime: e.mime, path: e.path, hash: e.hash, size: e.size, ts: e.ts}
+            ? {id: e.id, kind: e.kind, mime: e.mime, path: e.path, hash: e.hash, size: e.size, ts: e.ts, ocr: e.ocr}
             : {id: e.id, kind: e.kind, text: e.text, size: e.size, ts: e.ts});
         return JSON.stringify({version: 1, entries});
     }
@@ -662,12 +681,92 @@ class ClipboardIndicator extends PanelMenu.Button {
                 this._entries = [];
             }
             this._updateCount();
+            this._queueMissingOcr();
+        });
+    }
+
+    /* ---------- OCR ---------- */
+
+    _tesseractPath() {
+        if (this._tesseract === undefined)
+            this._tesseract = GLib.find_program_in_path('tesseract');
+        return this._tesseract;
+    }
+
+    _queueOcr(entry) {
+        if (!this._settings.get_boolean('ocr-images') || !this._tesseractPath())
+            return;
+        if (entry.kind !== 'image' || entry.ocr !== undefined)
+            return;
+        if (this._ocrQueue.includes(entry))
+            return;
+        this._ocrQueue.push(entry);
+        this._runOcrQueue();
+    }
+
+    _queueMissingOcr() {
+        for (const entry of this._entries) {
+            if (entry.kind === 'image' && entry.ocr === undefined)
+                this._queueOcr(entry);
+        }
+    }
+
+    _runOcrQueue() {
+        // One recognition at a time, at the lowest CPU priority, so bursts of
+        // copied images can never affect shell responsiveness.
+        if (this._ocrBusy || this._destroyed)
+            return;
+        const entry = this._ocrQueue.shift();
+        if (!entry)
+            return;
+        if (!this._entries.includes(entry)) { // deleted while queued
+            this._runOcrQueue();
+            return;
+        }
+        const langs = (this._settings.get_string('ocr-languages') || 'eng')
+            .replace(/[^a-zA-Z_+]/g, '') || 'eng';
+        let proc;
+        try {
+            proc = Gio.Subprocess.new(
+                ['nice', '-n', '19', this._tesseractPath(), entry.path, 'stdout', '-l', langs],
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+        } catch (e) {
+            console.error(`clipman: OCR failed to start: ${e.message}`);
+            return;
+        }
+        this._ocrBusy = true;
+        let timedOut = false;
+        const timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 30, () => {
+            timedOut = true;
+            proc.force_exit();
+            return GLib.SOURCE_REMOVE;
+        });
+        proc.communicate_utf8_async(null, this._ocrCancellable, (p, res) => {
+            if (!timedOut)
+                GLib.source_remove(timeoutId);
+            if (this._destroyed)
+                return;
+            this._ocrBusy = false;
+            try {
+                const [, stdout] = p.communicate_utf8_finish(res);
+                entry.ocr = p.get_successful() ? (stdout ?? '').trim() : '';
+            } catch (e) {
+                entry.ocr = ''; // don't retry forever on a broken image
+            }
+            this._scheduleSave();
+            // A search might be waiting on this very result.
+            if (this.menu.isOpen && this._searchEntry.get_text().trim() !== '')
+                this._refreshList();
+            this._runOcrQueue();
         });
     }
 
     /* ---------- teardown ---------- */
 
     destroy() {
+        this._destroyed = true;
+        this._ocrQueue = [];
+        this._ocrCancellable.cancel();
         if (this._ownerChangedId) {
             this._selection.disconnect(this._ownerChangedId);
             this._ownerChangedId = 0;
