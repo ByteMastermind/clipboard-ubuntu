@@ -23,7 +23,7 @@ Click the panel icon or press `Ctrl+Alt+H`, then:
 
 With the optional `tesseract-ocr` package installed, text inside copied images can be recognized (OCR) and searched too, so a screenshot containing "NewYork is the capital of" is found by searching "capital". Recognition runs once per image, in the background at the lowest CPU priority.
 
-History length, maximum clip size, image support, OCR and its languages, clips per page, popup centering and the shortcut can be configured:
+History length, maximum clip size, image support, OCR and its languages, clips per page, popup centering, panel icon hiding and the shortcut can be configured:
 
     gnome-extensions prefs clipboard-manager@bytemastermind
 

@@ -139,10 +139,12 @@ class ClipboardIndicator extends PanelMenu.Button {
         this._stateFile = Gio.File.new_for_path(GLib.build_filenamev([this._dir, 'history.json']));
 
         this.add_style_class_name('clipman-indicator');
-        this.add_child(new St.Icon({
+        this._icon = new St.Icon({
             gicon: Gio.icon_new_for_string(`${ext.path}/icons/clipboard-symbolic.svg`),
             style_class: 'system-status-icon clipman-panel-icon',
-        }));
+        });
+        this.add_child(this._icon);
+        this._applyPanelIconVisibility();
 
         this._buildMenu();
 
@@ -172,6 +174,8 @@ class ClipboardIndicator extends PanelMenu.Button {
             }
             if (key === 'center-popup')
                 this._applyPopupPosition();
+            if (key === 'hide-panel-icon')
+                this._applyPanelIconVisibility();
             if (this.menu.isOpen)
                 this._refreshList();
         });
@@ -305,6 +309,17 @@ class ClipboardIndicator extends PanelMenu.Button {
         });
         btn.connect('clicked', onClick);
         return btn;
+    }
+
+    _applyPanelIconVisibility() {
+        // The button must stay mapped (the popup anchors to it and the
+        // keybinding toggles its menu), so collapse it instead of hiding it.
+        const hide = this._settings.get_boolean('hide-panel-icon');
+        this._icon.visible = !hide;
+        this.style = hide ? '-natural-hpadding: 0px; -minimum-hpadding: 0px;' : null;
+        this.reactive = !hide;
+        this.can_focus = !hide;
+        this.track_hover = !hide;
     }
 
     _applyPopupPosition() {

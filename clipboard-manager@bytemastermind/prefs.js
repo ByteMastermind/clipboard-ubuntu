@@ -129,6 +129,13 @@ export default class ClipboardManagerPrefs extends ExtensionPreferences {
         settings.bind('center-popup', centerRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         appearanceGroup.add(centerRow);
 
+        const hideIconRow = new Adw.SwitchRow({
+            title: 'Hide the panel icon',
+            subtitle: 'The popup stays available via the keyboard shortcut',
+        });
+        settings.bind('hide-panel-icon', hideIconRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        appearanceGroup.add(hideIconRow);
+
         const previewRow = new Adw.SwitchRow({
             title: 'Show image previews',
             subtitle: 'Display thumbnails of stored images in the list',

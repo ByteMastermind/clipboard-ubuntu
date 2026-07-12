@@ -55,6 +55,11 @@
       <summary>Center the popup</summary>
       <description>Show the popup in the middle of the screen instead of attached to the panel icon.</description>
     </key>
+    <key name="hide-panel-icon" type="b">
+      <default>false</default>
+      <summary>Hide the panel icon</summary>
+      <description>Hide the top bar icon; the popup stays available via the keyboard shortcut.</description>
+    </key>
     <key name="toggle-menu" type="as">
       <default><![CDATA[['<Control><Alt>h']]]></default>
       <summary>Toggle the clipboard menu</summary>
