@@ -44,7 +44,7 @@ export default class ClipboardManagerPrefs extends ExtensionPreferences {
             title: 'History length',
             subtitle: 'Maximum number of clips kept',
             adjustment: new Gtk.Adjustment({
-                lower: 1, upper: 500, step_increment: 1, page_increment: 10,
+                lower: 1, upper: GLib.MAXINT32, step_increment: 1, page_increment: 10,
             }),
         });
         settings.bind('history-length', lengthRow, 'value', Gio.SettingsBindFlags.DEFAULT);

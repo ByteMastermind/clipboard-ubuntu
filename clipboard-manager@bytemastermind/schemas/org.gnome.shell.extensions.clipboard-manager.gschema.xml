@@ -4,7 +4,7 @@
           path="/org/gnome/shell/extensions/clipboard-manager/">
     <key name="history-length" type="i">
       <default>50</default>
-      <range min="1" max="500"/>
+      <range min="1"/>
       <summary>History length</summary>
       <description>Maximum number of clips kept in history.</description>
     </key>

@@ -1,4 +1,5 @@
 import Clutter from 'gi://Clutter';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
@@ -128,6 +129,7 @@ class ClipboardIndicator extends PanelMenu.Button {
         this._coalesceId = 0;
         this._saveId = 0;
         this._focusIdleId = 0;
+        this._pendingImageHashes = new Set();
         this._ocrQueue = [];
         this._ocrBusy = false;
         this._ocrCancellable = new Gio.Cancellable();
@@ -548,28 +550,102 @@ class ClipboardIndicator extends PanelMenu.Button {
             const size = bytes.get_size();
             if (size === 0 || size > maxBytes)
                 return;
-            const hash = GLib.compute_checksum_for_bytes(GLib.ChecksumType.MD5, bytes);
-            const existing = this._entries.find(e => e.kind === 'image' && e.hash === hash);
+            const byteHash = GLib.compute_checksum_for_bytes(GLib.ChecksumType.MD5, bytes);
+            const pixelHash = this._imagePixelHash(bytes, mime);
+            const existing = this._entries.find(e =>
+                e.kind === 'image' &&
+                (e.hash === byteHash || e.byteHash === byteHash ||
+                    (pixelHash !== null && e.pixelHash === pixelHash)));
             if (existing) {
                 this._moveToTop(existing);
                 return;
             }
+            // Different clipboard owners can encode the same screenshot
+            // differently. Guard both the raw and decoded-pixel identities
+            // while the image write is still in flight.
+            const pendingKeys = [`bytes:${byteHash}`];
+            if (pixelHash !== null)
+                pendingKeys.push(`pixels:${pixelHash}`);
+            if (pendingKeys.some(key => this._pendingImageHashes.has(key)))
+                return;
+            for (const key of pendingKeys)
+                this._pendingImageHashes.add(key);
             const id = GLib.uuid_string_random();
             const ext = mime.split('/')[1]?.split('+')[0] ?? 'png';
             const file = Gio.File.new_for_path(GLib.build_filenamev([this._imgDir, `${id}.${ext}`]));
             file.replace_contents_bytes_async(bytes, null, false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION, null, (f, res) => {
+                    for (const key of pendingKeys)
+                        this._pendingImageHashes.delete(key);
                     try {
                         f.replace_contents_finish(res);
                     } catch (e) {
                         console.error(`clipman: failed to store image: ${e.message}`);
                         return;
                     }
-                    const entry = {id, kind: 'image', mime, path: f.get_path(), hash, size, ts: Date.now()};
+                    const entry = {
+                        id, kind: 'image', mime, path: f.get_path(),
+                        hash: byteHash, byteHash, pixelHash, size, ts: Date.now(),
+                    };
                     this._addEntry(entry);
                     this._queueOcr(entry);
                 });
         });
+    }
+
+    _imagePixelHash(bytes, mime) {
+        let loader = null;
+        let closed = false;
+        try {
+            loader = GdkPixbuf.PixbufLoader.new_with_mime_type(mime);
+            loader.write_bytes(bytes);
+            if (!loader.close())
+                return null;
+            closed = true;
+
+            const pixbuf = loader.get_pixbuf();
+            if (!pixbuf)
+                return null;
+            const width = pixbuf.get_width();
+            const height = pixbuf.get_height();
+            const channels = pixbuf.get_n_channels();
+            const rowstride = pixbuf.get_rowstride();
+            const pixels = pixbuf.get_pixels();
+            if (width <= 0 || height <= 0 || (channels !== 3 && channels !== 4) ||
+                rowstride < width * channels)
+                return null;
+
+            // Normalize RGB/RGBA images to RGBA so encoding details and alpha
+            // channel presence do not affect the identity of the screenshot.
+            const checksum = new GLib.Checksum(GLib.ChecksumType.MD5);
+            checksum.update(encoder.encode(`rgba:${width}x${height}\0`));
+            const row = new Uint8Array(width * 4);
+            for (let y = 0; y < height; y++) {
+                const source = y * rowstride;
+                let target = 0;
+                for (let x = 0; x < width; x++) {
+                    const pixel = source + x * channels;
+                    row[target++] = pixels[pixel];
+                    row[target++] = pixels[pixel + 1];
+                    row[target++] = pixels[pixel + 2];
+                    row[target++] = channels === 4 ? pixels[pixel + 3] : 255;
+                }
+                checksum.update(row);
+            }
+            return checksum.get_string();
+        } catch (e) {
+            // Byte hashing remains a safe fallback for unsupported or corrupt
+            // image formats.
+            return null;
+        } finally {
+            if (loader && !closed) {
+                try {
+                    loader.close();
+                } catch (e) {
+                    // Ignore malformed clipboard image cleanup failures.
+                }
+            }
+        }
     }
 
     _addText(text, size) {
@@ -672,7 +748,11 @@ class ClipboardIndicator extends PanelMenu.Button {
 
     _serialize() {
         const entries = this._entries.map(e => e.kind === 'image'
-            ? {id: e.id, kind: e.kind, mime: e.mime, path: e.path, hash: e.hash, size: e.size, ts: e.ts, ocr: e.ocr}
+            ? {
+                id: e.id, kind: e.kind, mime: e.mime, path: e.path,
+                hash: e.hash, byteHash: e.byteHash, pixelHash: e.pixelHash,
+                size: e.size, ts: e.ts, ocr: e.ocr,
+            }
             : {id: e.id, kind: e.kind, text: e.text, size: e.size, ts: e.ts});
         return JSON.stringify({version: 1, entries});
     }
