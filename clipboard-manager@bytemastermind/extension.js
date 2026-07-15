@@ -49,8 +49,21 @@ function entryMatches(entry, query) {
 const ClipItem = GObject.registerClass(
 class ClipItem extends PopupMenu.PopupBaseMenuItem {
     _init(entry, flags, callbacks) {
-        super._init({style_class: 'clipman-item'});
+        // PopupBaseMenuItem normally turns hover into keyboard focus. Disable
+        // that binding so a row appearing under a stationary pointer cannot
+        // override the deliberate focus chosen by the popup or search entry.
+        super._init({style_class: 'clipman-item', hover: false});
+        this.track_hover = false;
         this.entry = entry;
+
+        this.connect('motion-event', () => {
+            callbacks.onPointerMotion(this);
+            return Clutter.EVENT_PROPAGATE;
+        });
+        this.connect('leave-event', () => {
+            callbacks.onPointerLeave(this);
+            return Clutter.EVENT_PROPAGATE;
+        });
 
         const metaParts = [];
         if (entry.kind === 'text' && flags.showLines) {
@@ -372,6 +385,8 @@ class ClipboardIndicator extends PanelMenu.Button {
         };
         const callbacks = {
             onDelete: item => this._deleteItem(item),
+            onPointerMotion: item => this._onItemPointerMotion(item),
+            onPointerLeave: item => this._onItemPointerLeave(item),
         };
 
         this._listSection.removeAll();
@@ -410,6 +425,33 @@ class ClipboardIndicator extends PanelMenu.Button {
         const item = items[Math.max(0, Math.min(index, items.length - 1))];
         item.grab_key_focus();
         return true;
+    }
+
+    _onItemPointerMotion(item) {
+        const focus = global.stage.get_key_focus();
+        if (focus === item || (focus !== null && item.contains(focus)))
+            return;
+
+        if (focus !== null && this._searchEntry.contains(focus)) {
+            // Keep text input focused while still showing which result is
+            // under the pointer. `active` normally grabs focus, so suppress
+            // that side effect for this pointer-only state change.
+            if (!item.active) {
+                const canFocus = item.can_focus;
+                item.can_focus = false;
+                item.active = true;
+                item.can_focus = canFocus;
+            }
+            return;
+        }
+
+        item.grab_key_focus();
+    }
+
+    _onItemPointerLeave(item) {
+        const focus = global.stage.get_key_focus();
+        if (focus !== item && (focus === null || !item.contains(focus)))
+            item.active = false;
     }
 
     _flipPage(delta, focusFirst) {
